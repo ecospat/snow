@@ -1,0 +1,111 @@
+//direct link to GEE: https://code.earthengine.google.com/cdf57b697608c682b4c16820cbb0aaf2?noload=true
+
+
+var geom = /* color: #31d65c */ee.Geometry.Polygon( [[[6.8474713278942545, 46.391294575049415], [7.028754363111602, 46.17109142967553], [7.136817037486253, 46.21056191142207], [7.218277497002646, 46.273709875383176], [7.234757787963304, 46.3287406342844], [7.262173913676861, 46.553033636014575], [7.2182265026631285, 46.56247716014642], [7.0012361477766945, 46.4698598418624], [6.971046655935311, 46.504371413916], [6.918834745814593, 46.534141687605626], [6.836433349752497, 46.526583051248245], [6.784245819981152, 46.47364320687868]]]);
+
+
+//elevation layer
+var SRTM=ee.Image("USGS/SRTMGL1_003");
+var elevation=SRTM;
+
+// funtion to rename band names from image collection
+function renameBands(collection, inputNames, outputNames){
+  if(inputNames.length != outputNames.length){
+    print('Input and output have different sizes!');
+    return;
+  }
+  collection = collection.map(function(image){
+    return image.select(inputNames).rename(outputNames);
+  })
+  return collection;
+}
+
+//NDSI function
+function getNDSI(image){
+  return image.normalizedDifference(['green','SWIR']).rename('NDSI');
+}
+
+
+  var LANDSAT5 = ee.ImageCollection('LANDSAT/LT05/C01/T1_SR').merge(ee.ImageCollection('LANDSAT/LT04/C01/T1_SR'));
+  var LANDSAT7 = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR');
+  var LANDSAT8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR');
+  
+  
+  
+  LANDSAT5 = renameBands(LANDSAT5, 
+                              ['B1','B2','B3','B4','B5','pixel_qa'],
+                              ['blue','green','red','NIR','SWIR','pixel_qa']);
+  
+  // info: https://landsat.usgs.gov/what-are-best-spectral-bands-use-my-study
+  LANDSAT7 = renameBands(LANDSAT7, 
+                              ['B1','B2','B3','B4','B5','pixel_qa'],
+                              ['blue','green','red','NIR','SWIR','pixel_qa']);
+  
+  // info: https://en.wikipedia.org/wiki/Landsat_8
+  LANDSAT8 = renameBands(LANDSAT8, 
+                              ['B1','B2','B3','B4','B5','B6','pixel_qa'], 
+                              ['coastal','blue','green','red','NIR','SWIR','pixel_qa']);
+                            
+  
+  
+  var cloudTol = 100;
+  
+  var allDataColelction=LANDSAT5.merge(LANDSAT7).merge(LANDSAT8).select(['blue','green','red','NIR','SWIR','pixel_qa']);
+  var imagesOfInterest=allDataColelction.filter(ee.Filter.lte('CLOUD_COVER', cloudTol)).filterBounds(geom);
+  
+  print(imagesOfInterest)
+  
+  //add snow band
+  imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.addBands(image.select('pixel_qa').bitwise_and(16).neq(0).rename('asSnow')).updateMask(image.select('pixel_qa').bitwise_and(32+8).not());
+  })
+  //add DOY
+  imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.set('DayInTheYear',image.date().getRelative('day', 'year'));
+  })
+  //remove hillShadow
+  imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.addBands(ee.Terrain.hillShadow(elevation, image.get('SOLAR_AZIMUTH_ANGLE'), image.get('SOLAR_ZENITH_ANGLE'),200,true).focal_median(2).reproject(elevation.projection()).rename('ShadowMap'));
+  })
+  //remove Shadows
+ imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.updateMask(image.select('ShadowMap'));
+  })
+
+//filter for desiered DOY
+imagesOfInterest=imagesOfInterest.filter(ee.Filter.and(ee.Filter.gte('DayInTheYear', 50),ee.Filter.lte('DayInTheYear', 250)));
+print(imagesOfInterest)
+
+//num of images
+var num = imagesOfInterest.reduce(ee.Reducer.count())
+
+//for export to google drive the number of images
+var CRS   = 'epsg:21781';
+Export.image.toDrive(num, 'num', 'EarthEngine', 'num', null, geom, 25, CRS);
+
+var sizeCollection = imagesOfInterest.size()
+
+var all =imagesOfInterest.toBands()
+
+var imageList=imagesOfInterest.toList(sizeCollection);
+print(sizeCollection)
+
+//export images to your drive
+for(var i = 0 ; i < sizeCollection; i++){
+  var image     = ee.Image(imagesOfInterest.toList(sizeCollection,0).get(i)).toFloat();
+  var NDSI      = getNDSI(image);
+  image         = image.addBands(NDSI);
+  var imageDate = ee.Date(image.get('system:time_start'));
+  var DOY       = ee.Number(image.get('DayInTheYear'));
+  var imageID   = image.id().getInfo();
+
+  var imageName = imageDate.format('D-y-M-d').evaluate(function(name){
+    Export.image.toDrive(ee.Image(imagesOfInterest.toList(sizeCollection,0).get(i)).toFloat(), name, "NDSI","","10000", geom, 10.000001, CRS);
+  });
+
+  
+}
+
+
+
+

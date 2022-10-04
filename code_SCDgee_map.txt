@@ -1,0 +1,210 @@
+//direct link to GEE: https://code.earthengine.google.com/3db9650ee5a8e3c14641810ade2cc6a2?noload=true
+
+
+var geom = /* color: #31d65c */ee.Geometry.Polygon( [[[6.8474713278942545, 46.391294575049415], [7.028754363111602, 46.17109142967553], [7.136817037486253, 46.21056191142207], [7.218277497002646, 46.273709875383176], [7.234757787963304, 46.3287406342844], [7.262173913676861, 46.553033636014575], [7.2182265026631285, 46.56247716014642], [7.0012361477766945, 46.4698598418624], [6.971046655935311, 46.504371413916], [6.918834745814593, 46.534141687605626], [6.836433349752497, 46.526583051248245], [6.784245819981152, 46.47364320687868]]]);
+
+
+
+var forExport=false;//optional, if true will export intermediary results to you asset
+var withRendering=true;//optional if loading from asset
+var withInterface=false;//optional, if true will generate chart online for individal pixels
+var CRS   = 'epsg:21781';
+//don't forget to change the polygon geometry to your study area
+
+//load elevation
+var SRTM=ee.Image("USGS/SRTMGL1_003"); 
+var elevation=SRTM;
+
+// funtion to rename band names from image collection
+function renameBands(collection, inputNames, outputNames){
+  if(inputNames.length != outputNames.length){
+    print('Input and output have different sizes!');
+    return;
+  }
+  collection = collection.map(function(image){
+    return image.select(inputNames).rename(outputNames);
+  })
+  return collection;
+}
+
+//load landsat images collection
+  var LANDSAT5 = ee.ImageCollection('LANDSAT/LT05/C01/T1_SR').merge(ee.ImageCollection('LANDSAT/LT04/C01/T1_SR'));
+  var LANDSAT7 = ee.ImageCollection('LANDSAT/LE07/C01/T1_SR');
+  var LANDSAT8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_SR');
+  
+  LANDSAT5 = renameBands(LANDSAT5, 
+                              ['B1','B2','B3','B4','B5','pixel_qa'],
+                              ['blue','green','red','NIR','SWIR','pixel_qa']);
+  
+  // info: https://landsat.usgs.gov/what-are-best-spectral-bands-use-my-study
+  LANDSAT7 = renameBands(LANDSAT7, 
+                              ['B1','B2','B3','B4','B5','pixel_qa'],
+                              ['blue','green','red','NIR','SWIR','pixel_qa']);
+  
+  // info: https://en.wikipedia.org/wiki/Landsat_8
+  LANDSAT8 = renameBands(LANDSAT8, 
+                              ['B1','B2','B3','B4','B5','B6','pixel_qa'], 
+                              ['coastal','blue','green','red','NIR','SWIR','pixel_qa']);
+                            
+  
+  var cloudTol = 100;//cloud cover tolerance
+
+  
+  var allDataCollection=LANDSAT5.merge(LANDSAT7).merge(LANDSAT8).select(['blue','green','red','NIR','SWIR','pixel_qa']);
+  var imagesOfInterest=allDataCollection.filter(ee.Filter.lte('CLOUD_COVER', cloudTol)).filterBounds(geom);
+  
+  //add the snow band
+  imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.addBands(image.select('pixel_qa').bitwise_and(16).neq(0).rename('asSnow')).updateMask(image.select('pixel_qa').bitwise_and(32+8).not());
+  })
+  
+  //add the DOY
+  imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.set('DayInTheYear',image.date().getRelative('day', 'year'));
+  })
+  
+  //add hillshadow band
+    imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.addBands(ee.Terrain.hillShadow(elevation, image.get('SOLAR_AZIMUTH_ANGLE'), image.get('SOLAR_ZENITH_ANGLE'),200,true).focal_median(2).reproject(elevation.projection()).rename('ShadowMap'));
+  })
+  
+  //remove shadows
+ imagesOfInterest=imagesOfInterest.map(function(image){
+    return image.updateMask(image.select('ShadowMap'));
+  })
+  
+  //number of images per pixel
+    var num = imagesOfInterest.reduce(ee.Reducer.count())
+  
+  //export this to your drive
+  Map.addLayer(num)
+  Export.image.toDrive(num, 'num', 'EarthEngine', 'num', null, geom, 30, CRS);
+
+  
+  
+  var imageVisParam = {"opacity":1,"bands":["red","green","blue"],"min":0,"max":5000,"gamma":1};
+  var imageVisSnowParam = {"opacity":1,"bands":["asSnow"],"min":0,"max":1,"gamma":1};
+  
+  Map.addLayer(imagesOfInterest.first(),imageVisParam,null,false);
+  Map.addLayer(imagesOfInterest.first(),imageVisSnowParam,null,false);
+  
+  
+  // Create a time filter to define a match as overlapping timestamps.
+  
+  var timeFilter = ee.Filter.maxDifference({
+      difference: 10, // number of day of the moving average
+      leftField: 'DayInTheYear',
+      rightField: 'DayInTheYear'
+    });
+  
+  // Define the join
+  var saveAllJoin = ee.Join.saveAll({
+    matchesKey: 'matches',
+    //ordering: 'system:time_start',
+    //ascending: true
+  });
+  
+  var listOfDays=ee.List.sequence(0,366).map(function(d){return ee.Feature(ee.Geometry.Point(0,0),ee.Dictionary.fromLists(['DayInTheYear'], [d]))});
+  
+  var collectionOfDays = ee.ImageCollection(saveAllJoin.apply(listOfDays, imagesOfInterest, timeFilter).map(function(ft){
+    var localColelction=ee.ImageCollection(ee.List(ft.get('matches')));
+    var dailyImage=localColelction.select('asSnow').filterMetadata('DayInTheYear','equals',ft.get('DayInTheYear')).mean();
+    dailyImage=ee.Image(ee.Algorithms.If(dailyImage.bandNames().size(), dailyImage, ee.Image.constant(0).updateMask(0))).toFloat()
+    return localColelction.mean().addBands(dailyImage.rename('dailyFrozen')).set('DayInTheYear',ft.get('DayInTheYear'));
+  }));
+  
+if(forExport){//export to asset
+  collectionOfDays.size().evaluate(function(size){
+  for(var i=0; i<size; i++){
+    Export.image.toAsset({
+      image:ee.Image(collectionOfDays.toList(size).get(i)),
+      description:'export_a_day_of_the_year_'+i,
+      assetId:"yourasset/meltDaysNew/day_"+i,
+      region:geom,
+      scale:30,
+    //maxPixels:,
+    });
+  }
+  })
+}
+
+if(withRendering){
+  if (!collectionOfDays){
+    var collectionOfDays = ee.ImageCollection("yourasset/meltDaysNew");
+  }
+  //filtering
+  
+  collectionOfDays=collectionOfDays.filter(ee.Filter.and(ee.Filter.gte('DayInTheYear', 0),ee.Filter.lte('DayInTheYear', 250)));
+
+  if(withInterface){//interactive charts. optional
+    var resultsPanel=ui.Panel({layout:ui.Panel.Layout.flow('vertical'),style: {width: '25%'}});
+    ui.root.add(resultsPanel)
+    //print(resultsPanel.style())
+    var inspector = ui.Panel([ui.Label('Click to get frozen time series')]);
+    Map.add(inspector);
+    var mp=ee.List([]);
+    Map.onClick(function(coords) {
+      // Show the loading label.
+      var point=ee.Geometry.Point([coords['lon'],coords['lat']]);
+      mp=mp.add(ee.Feature(point));
+      //print(mp)
+      resultsPanel.clear()
+      var chart1=ui.Chart.image.seriesByRegion(collectionOfDays, mp, ee.Reducer.first(),'asSnow', 30,'DayInTheYear');
+      var chart2=ui.Chart.image.series(collectionOfDays.select(['asSnow','dailyFrozen']), point, ee.Reducer.mean(), 30,'DayInTheYear');
+      resultsPanel.clear();
+      resultsPanel.add(chart1)
+      resultsPanel.add(chart2/*.setOptions({
+        trendlines: {
+          0: {
+            type: 'linear',
+            color: 'red',
+            lineWidth: 3,
+            opacity: 0.5,
+            showR2: false,
+            visibleInLegend: false
+          }
+        }
+      })*/)
+    });
+  }
+  
+  var geometry = /* color: #00ff0a */ee.Geometry.Polygon(
+          [[[6.933746337890625, 46.462646709948466],
+            [6.958465576171875, 46.3850226970367],
+            [7.042236328125, 46.35375257360064],
+            [7.1905517578125, 46.379338551602295],
+            [7.218017578125, 46.473051279749264],
+            [7.12188720703125, 46.51653975165043]]]);
+            
+  Map.addLayer(ee.Image().paint(geom, 0, 2), {}, 'AOI', true);
+
+  Map.centerObject(geom,11)
+  
+  var th=0.5;
+  
+  
+//create final map
+  collectionOfDays=collectionOfDays.map(function(image){
+    return image.addBands(ee.Image.constant(image.get('DayInTheYear')).toInt().rename('DayInTheYear'))
+                .addBands(image.select('asSnow').subtract(th).abs().multiply(-1).rename('thQuality'));
+    
+  });
+  
+  var result=collectionOfDays.qualityMosaic('thQuality');
+  var imageVisDayIntheYearParam = {"opacity":1,"bands":["DayInTheYear"],"min":0,"max":365,"gamma":1};
+  Map.addLayer(result.clip(geom),imageVisDayIntheYearParam)
+  print(collectionOfDays)
+  
+}
+print(result)
+var collred = collectionOfDays.min().select('asSnow').gt(th)
+result=result.select('DayInTheYear').where(collred.eq(1),365)// put 365 for everlasting snow
+print(result)
+
+//exportation of the final snow index
+var CRS   = 'epsg:21781';
+Export.image.toDrive(result.select('DayInTheYear'), 'ExportedSnow', 'EarthEngine', 'Snow20j', null, geom, 25, CRS);
+
+
+
+
