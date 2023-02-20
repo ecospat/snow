@@ -12,8 +12,7 @@ This approach directly produces an mean snowmelt date map in a procedure fully e
 
 This approach first downloads the normalised difference snow index (NDSI) images from GEE as tiff files. [Here](https://code.earthengine.google.com/cdf57b697608c682b4c16820cbb0aaf2?noload=true) is a direct link to the extraction script inside GEE and full code is available [here](http://https://github.com/ecospat/ecospat/snow/code_extraction_NDSI.txt).
 
-The final mean snowmelt date map is produced by [this code](https://github.com/ecospat/ecospat/snow/blob/main/SCD_code_R.R).
-
+The final mean snowmelt date map is produced by [this code](https://github.com/ecospat/snow/blob/main/SCD_code_R.R).
 
 Those remote sensing analyses are based on the work of Macander, M. J., Swingley, C. S., Joly, K., & Raynolds, M. K. (2015). Landsat-based snow persistence map for northwest Alaska. Remote Sensing of Environment, 163, 23‑31. [https://doi.org/10.1016/j.rse.2015.02.028](https://doi.org/10.1016/j.rse.2015.02.028).
 
