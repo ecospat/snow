@@ -18,6 +18,6 @@ The final mean snowmelt date map is produced by [this code](http://https://githu
 Those remote sensing analyses are based on the work of Macander, M. J., Swingley, C. S., Joly, K., & Raynolds, M. K. (2015). Landsat-based snow persistence map for northwest Alaska. Remote Sensing of Environment, 163, 23‑31. [https://doi.org/10.1016/j.rse.2015.02.028](https://doi.org/10.1016/j.rse.2015.02.028).
 
 ###Data
-[Plant data](https://github.com/ecospat/ecospat/snow/Final_Coord_30Occ.txt) used for the species distribution models.
+[Plant data](https://github.com/ecospat/snow/blob/main/Final_Coord_30Occ.txt) used for the species distribution models.
 
 [Meteo stations data](https://github.com/ecospat/snow/blob/main/meteostations/order_108597_data.txt) used to validate the mean snowmelt date maps.
