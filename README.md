@@ -20,5 +20,4 @@ Those remote sensing analyses are based on the work of Macander, M. J., Swingley
 ###Data
 [Plant data](http://https://github.com/ecospat/ecospat/snow/Final_Coord_30Occ.txt) used for the species distribution models.
 
-[Meteo stations data](http://https://github.com/ecospat/ecospat/snow/meteostations/order_108597_data.txt) used to validate the mean snowmelt date maps.
-
+[Meteo stations data](https://github.com/ecospat/snow/blob/main/meteostations/order_108597_data.txt) used to validate the mean snowmelt date maps.
