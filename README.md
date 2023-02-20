@@ -6,11 +6,11 @@ This page provides the code used to create mean snowmelt date maps used as predi
 
 ###Google Earth Engine (GEE) approach
 
-This approach directly produces an mean snowmelt date map in a procedure fully embedded inside GEE. [Here](https://code.earthengine.google.com/3db9650ee5a8e3c14641810ade2cc6a2?noload=true) is a direct link to the script inside GEE and full code is available [here](http://https://github.com/ecospat/ecospat/snow/code_SCDgee_map.txt).
+This approach directly produces an mean snowmelt date map in a procedure fully embedded inside GEE. [Here](https://code.earthengine.google.com/3db9650ee5a8e3c14641810ade2cc6a2?noload=true) is a direct link to the script inside GEE and full code is available [here](https://github.com/ecospat/snow/blob/main/code_SCDgee_map.txt).
 
 ###Custom R approach
 
-This approach first downloads the normalised difference snow index (NDSI) images from GEE as tiff files. [Here](https://code.earthengine.google.com/cdf57b697608c682b4c16820cbb0aaf2?noload=true) is a direct link to the extraction script inside GEE and full code is available [here](http://https://github.com/ecospat/ecospat/snow/code_extraction_NDSI.txt).
+This approach first downloads the normalised difference snow index (NDSI) images from GEE as tiff files. [Here](https://code.earthengine.google.com/cdf57b697608c682b4c16820cbb0aaf2?noload=true) is a direct link to the extraction script inside GEE and full code is available [here](https://github.com/ecospat/snow/blob/main/code_extraction_NDSI.txt).
 
 The final mean snowmelt date map is produced by [this code](https://github.com/ecospat/snow/blob/main/SCD_code_R.R).
 
