@@ -1,0 +1,51 @@
+Federal Office of Meteorology and Climatology, MeteoSwiss
+Operation Center 1
+Postfach 257
+8058 Zürich-Flughafen
+
+stn yyyyMMddHHmm
+
+stn Station abbreviation
+y   Year
+M   Month
+d   Day
+H   Hour
+m   Minute
+
+Times in UTC:            0040 UTC = 02:40 Summer time
+                                  = 01:40 Winter time
+
+Observation interval for hourly values, unless otherwise indicated in the parameter descrip-tion: HH  = (HH-1):01 - HH:00
+Example: 13 = observation period 12:01 to 13:00 
+
+Missing values are marked with '-'
+
+Quality information: The key to quality information can be found under: https://gate.meteoswiss.ch/idaweb/text/datenqualitaet_legende_de.pdf
+
+ 
+
+
+
+Stations
+--------
+stn       Name                                 Parameter        Data source                                        Longitude/Latitude       Coordinates [km] Elevation [m]
+AIG       Aigle                                hto000d0         MeteoSchweiz                                       6°55'/46°20'             560404/130713    381
+BEX       Bex                                  hto000d0         MeteoSchweiz                                       6°60'/46°15'             565806/121511    402
+CHD       Château-d'Oex                        hto000d0         MeteoSchweiz                                       7°08'/46°29'             577040/147654    1028
+CDM       Col des Mosses                       hto000d0         MeteoSchweiz                                       7°06'/46°23'             573817/137852    1412
+GRY       Gryon                                hto000d0         MeteoSchweiz                                       7°04'/46°16'             571093/124889    1158
+SLF1LC    La Comballaz                         hto000d0         WSL-Institut für Schnee- und Lawinenforschung SLF  7°05'/46°23'             572640/136580    1360
+SEP       Le Sepey                             hto000d0         MeteoSchweiz                                       7°03'/46°22'             570690/135610    1267
+AVA       Les Avants                           hto000d0         MeteoSchweiz                                       6°57'/46°27'             561880/145178    1036
+DIB       Les Diablerets                       hto000d0         MeteoSchweiz                                       7°10'/46°21'             579029/132860    1190
+SLF1LS    Leysin                               hto000d0         WSL-Institut für Schnee- und Lawinenforschung SLF  7°02'/46°21'             568168/133478    1300
+CLA       Montreux-Clarens                     hto000d0         MeteoSchweiz                                       6°54'/46°27'             558560/143600    405
+VEV       Vevey / Corseaux                     hto000d0         MeteoSchweiz                                       6°49'/46°28'             552106/146847    405
+
+Parameter
+---------
+          Unit                                 Description
+hto000d0  cm                                   Snow depth; morning measurement at 6 UTC
+qhto000d0 Code                                 en/legend.parameter.dq
+mhto000d0 Code                                 Mutation information on hto000d0
+
